@@ -1,0 +1,235 @@
+<canvas id="canvas" width="1920" height="1080"></canvas>
+<div style="position:absolute; top:0;left:0; display:flex;">
+	<button onclick="dragoncurve()">dragon curve</button>
+	<button onclick="tree()">tree</button>
+	<button onclick="koch()">koch</button>
+	<button onclick="koch2()">koch2</button>
+	<button onclick="sierpinski()">sierpinski</button>
+	<button onclick="sierpinski2()">sierpinski2</button>
+	<button onclick="plant()">plant</button>
+</div>
+
+<script type="text/javascript">
+	g = canvas.getContext('2d');
+
+
+	// https://en.wikipedia.org/wiki/L-system
+
+
+
+	// this function expands the string depending on the rules
+	// Example rule : {"R":"RR"}. 
+	// That means grammar("R",{"R":"RR"},depth=1) is "RR"
+	// Depth is how many times are you expanding the string
+	// Example with the rule above: R -> RR -> RRRR -> RRRRRR -> RR...RR -> ... -> RRRRR......RRRRRR
+	function grammar(string,rules,depth=10){
+		if (depth==0){
+			// console.log(string)
+			return string;
+		}
+		let copy = "";
+		for (var a=0;a<string.length;a++){
+			if (rules[string[a]])
+				copy+=rules[string[a]]
+			else
+				copy+=string[a];
+		}
+		string = copy;
+		return grammar(string,rules,depth-1);
+	}
+
+	function draw(string,state,interpretation){
+		g.clearRect(0,0,1920,1080);
+		g.beginPath();
+		for (let a=0;a<string.length;a++){
+			interpretation(string[a],state);
+		}
+		g.stroke();
+	}
+	function drawForward(state){
+		g.moveTo(state.position.x,state.position.y);
+		
+		state.position.x += Math.cos(state.angle)*state.linesize;
+		state.position.y += Math.sin(state.angle)*state.linesize;
+		g.lineTo(state.position.x,state.position.y);
+	}
+	onload = dragoncurve;
+	function dragoncurve(){
+		let t = grammar("R",{
+			"R":"R+T",
+			"T":"R-T",
+		},18);
+
+		let startState={linesize:1,angle:0,position:{x:1920/2-400,y:1080/2-300}};
+
+		draw(t,startState,(char,state)=>{
+			switch(char){
+				case '+':
+					state.angle += Math.PI/2;
+					drawForward(state);
+					break;
+				case '-':
+					state.angle -= Math.PI/2;
+					drawForward(state);
+					break;
+			}
+		})
+	}
+
+	function tree(){
+		// 0 means draw tree
+		// 1 means draw line
+		// [ means rotate left 45 deg
+		// ] means rotate right 45 deg
+		let t = grammar("0",{
+			"1":"11",
+			"0":"1[0]]0]]]1]]]]",
+		},10);
+
+		// the rule 1[0]]0]]]1]]]] means:
+		// 1. go up
+		// 2. turn left 45deg
+		// 3. draw tree
+		// 4.5. turn right 90 deg
+		// 6. draw tree
+		// 7.8.9. turn back
+		// 10. go back
+		// 11.12.13.14 turn 180deg to face forward
+
+		let startState={linesize:1,angle:0,position:{x:10,y:1080/2}};
+
+		draw(t,startState,(char,state)=>{
+			switch(char){
+				case '0':
+					g.lineTo(
+						state.position.x + Math.cos(state.angle)*state.linesize,
+						state.position.y + Math.sin(state.angle)*state.linesize
+					);
+					g.moveTo(state.position.x,state.position.y);
+					break;
+				case '1':
+					drawForward(state);
+					break;
+				case '[':
+					state.angle+=Math.PI/4
+					break;
+				case ']':
+					state.angle-=Math.PI/4
+					break;
+			}
+		})
+	}
+
+
+	function koch(){
+		let t = grammar("F",{
+			"F":"F+F−F−F+F",
+		},4);
+
+		let startState={linesize:10,angle:0,position:{x:1920/2-400,y:1080/2}};
+		draw(t,startState,(char,state)=>{
+			switch(char){
+				case 'F':
+					drawForward(state);
+					break;
+				case '+':
+					state.angle-=Math.PI/2
+					break;
+				case '−':
+					state.angle+=Math.PI/2
+					break;
+			}
+		})
+	}
+
+	function koch2(){
+		let t = grammar("F",{
+			"F":"F+F−F−F+F",
+		},7);
+
+		let startState={linesize:0.5,angle:0,position:{x:1920/2-400,y:900}};
+		draw(t,startState,(char,state)=>{
+			switch(char){
+				case 'F':
+					drawForward(state);
+					break;
+				case '+':
+					state.angle-=Math.PI/2
+					break;
+				case '−':
+					state.angle+=Math.PI/2
+					break;
+			}
+		})
+	}
+
+	function sierpinski(){
+		let t = grammar("A",{
+			"A":"B-A-B",
+			"B":"A+B+A"
+		},6);
+
+		let startState={linesize:5,angle:0,position:{x:1920/2-400,y:1080/2}};
+		draw(t,startState,(char,state)=>{
+			switch(char){
+				case 'A':
+				case 'B':
+					drawForward(state);
+					break;
+				case '+':
+					state.angle-=Math.PI/3
+					break;
+				case '-':
+					state.angle+=Math.PI/3
+					break;
+			}
+		})
+	}
+	function sierpinski2(){
+		let t = grammar("F-G-G",{
+			"F":"F-G+F+G-F",
+			"G":"GG"
+		},7);
+
+		let startState={linesize:5,angle:0,position:{x:100,y:100}};
+		draw(t,startState,(char,state)=>{
+			switch(char){
+				case 'F':
+				case 'G':
+					drawForward(state);
+					break;
+				case '+':
+					state.angle-=Math.PI/3*2
+					break;
+				case '-':
+					state.angle+=Math.PI/3*2
+					break;
+			}
+		})
+	}
+	//F-F-F+ r -F+F+Fr
+	function plant(){
+		let t = grammar("X",{
+			"X":"F+X-X-F-FX+Xr-F+F+Fr",
+			"F":"FF"
+		},6);
+		// console.log(t);
+		let startState={linesize:10,angle:0,position:{x:100,y:200}};
+		draw(t,startState,(char,state)=>{
+			switch(char){
+				case 'F':
+					drawForward(state);
+					break;
+				case '+':
+					state.angle-=25*Math.PI/180
+					break;
+				case '-':
+					state.angle+=25*Math.PI/180
+					break;
+				case 'r':
+					state.angle+=Math.PI
+					break;
+			}
+		})
+	}
+</script>
